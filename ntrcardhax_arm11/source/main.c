@@ -295,6 +295,20 @@ s32 find_version_specific_addresses()
 			if(mapMemoryAdr < 0x20000)
 				mapMemoryAdr += 0xfff00000; // 0xDFF80000;
 		}
+		//7F 40 2D E9                 STMFD           SP!, {R0-R6,LR}
+		//03 C0 A0 E1                 MOV             R12, R3
+		//7A 05 51 E3                 CMP             R1, #0x1E800000
+		//02 36 81 E0                 ADD             R3, R1, R2, LSL#12
+		//20 E0 9D E5                 LDR             LR, [SP, #0x20]
+		else if (mapMemoryAdr == -1 && 0xE92D407F == *(ii) && 0xE1A0C003 == *(ii + 1) && 0xE351057A == *(ii + 2) && 0xE0813602 == *(ii + 3) && 0xE59DE020 == *(ii + 4))
+		{
+			mapMemoryAdr = (uint8_t*)ii - 0xDFF80000;
+
+			//Dont need this on 3ds
+			if(mapMemoryAdr < 0x20000)
+				mapMemoryAdr += 0xfff00000; // 0xDFF80000;
+		}
+
 		//79 05 20 E1                 BKPT    0x59
 		else if(PXI_BASE == -1 && 0xE1200579 == *(ii))
 		{
@@ -379,6 +393,11 @@ int main(int argc, char** argv)
 	printf("wrapperAdr   : %08x\n",wrapperAdr);
 	printf("mapMemoryAdr : %08x\n",mapMemoryAdr);
 	printf("PXI_BASE     : %08x\n",PXI_BASE);
+
+	if (wrapperAdr == -1 || mapMemoryAdr == -1 || PXI_BASE == -1) {
+		printf("Failed to find version specific addresses\n");
+		goto exit;
+	}
 
 	printf("backdoor returned %08lx\n", (svcBackdoor(dump_chunk_wrapper), g_backdoorResult));
 
