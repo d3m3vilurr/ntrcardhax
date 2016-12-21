@@ -40,6 +40,34 @@ def find_rtfs_handle_address(arm9bin):
     if addr:
         return addr + 0x10
 
+def exist_map_memory_adr(arm9bin):
+    # F0 40 2D E9         STMFD   SP!, {R4-R7,LR}
+    # 14 D0 4D E2         SUB     SP, SP, #0x14
+    # 03 40 A0 E1         MOV     R4, R3
+    # 7C C0 9F E5         LDR     R12, =0x1F600000
+    # 28 50 9D E5         LDR     R5, [SP,#0x28]
+    type0 = search(arm9bin,
+                   '\xf0\x40\x2d\xe9\x14\xd0\x4d\xe2\x03\x40\xa0\xe1\x7c\xc0\x9f\xe5\x28\x50\x9d\xe5')
+    # FF 5F 2D E9         STMFD   SP!, {R0-R12,LR}
+    # 1F 04 51 E3         CMP     R1, #0x1F000000
+    # 01 40 A0 E1         MOV     R4, R1
+    # 02 50 A0 E1         MOV     R5, R2
+    # 00 80 A0 E1         MOV     R8, R0
+    # 05 26 81 E0         ADD     R2, R1, R5,LSL#12
+    type1 = search(arm9bin,
+                   '\xff\x5f\x2d\xe9\x1f\x04\x51\xe3\x01\x40\xa0\xe1\x02\x50\xa0\xe1\x00\x80\xa0\xe1\x05\x26\x81\xe0')
+
+    # 7F 40 2D E9         STMFD   SP!, {R0-R6,LR}
+    # 03 C0 A0 E1         MOV     R12, R3
+    # 7A 05 51 E3         CMP     R1, #0x1E800000
+    # 02 36 81 E0         ADD     R3, R1, R2, LSL#12
+    # 20 E0 9D E5         LDR     LR, [SP, #0x20]
+    type2 = search(arm9bin,
+                   '\x7f\x40\x2d\xe9\x03\xc0\xa0\xe1\x7a\x05\x51\xe3\x02\x36\x81\xe0\x20\xe0\x9d\xe5')
+    if type0 or type1 or type2:
+        return 'true'
+    return 'false'
+
 def hex_or_dead(addr):
     return hex(addr or 0xdeadbabe)
 
@@ -55,3 +83,4 @@ with open(sys.argv[1], 'rb') as r:
     print '#define NTRCARD_HEADER_ADDR %s' % hex_or_dead(ntrcard_header_addr)
     print '#define RTFS_CFG_ADDR       %s' % hex_or_dead(rtfs_cfg_addr)
     print '#define RTFS_HANDLE_ADDR    %s' % hex_or_dead(rtfs_handle_addr)
+    print '#define EXIST_MAP_MEMORY_ADDR %s' % exist_map_memory_adr(arm9bin)
