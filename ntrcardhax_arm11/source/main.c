@@ -372,6 +372,25 @@ void LoadArm9Payload()
 	fclose(file);
 }
 
+int checkAmHandle() {
+	Handle amHandle = 0;
+
+	srvGetServiceHandleDirect(&amHandle, "am:u");
+	if (amHandle) {
+		svcCloseHandle(amHandle);
+		return 0;
+	}
+	return -1;
+}
+int initArm11Hax() {
+	if (!checkAmHandle()) {
+		return 0;
+	}
+
+	svchax_init(true);
+	return checkAmHandle();
+}
+
 int main(int argc, char** argv)
 {
 	gfxInitDefault(); //makes displaying to screen easier
@@ -383,11 +402,14 @@ int main(int argc, char** argv)
 
 	LoadArm9Payload();
 
-	svchax_init(true);
-	if(!__ctr_svchax || !__ctr_svchax_srv) {
+	printf("Loaded arm9 payload.\n");
+
+	if (initArm11Hax() < 0) {
 		printf("Failed to acquire arm11 kernel access.\n");
 		goto exit;
 	}
+
+	printf("Got arm11 kernel access.\n");
 
 	u32* resp = svcBackdoor(find_version_specific_addresses);
 	printf("wrapperAdr   : %08x\n",wrapperAdr);
@@ -524,3 +546,5 @@ exit:
 	gfxExit();
 	return 0;
 }
+
+// vim: noet ts=4 sw=4
