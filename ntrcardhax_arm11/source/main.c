@@ -387,7 +387,9 @@ int initArm11Hax() {
 		return 0;
 	}
 
+	printf("Init svchax..\n");
 	svchax_init(true);
+	printf("Initted svchax\n");
 	return checkAmHandle();
 }
 
