@@ -19,7 +19,9 @@ def find_ntrcard_header_address(arm9bin):
     # 05 00               MOVS    R5, R0
     # 2A 48               LDR     R0, =ntrcard_header
     # 26 00               MOVS    R6, R4
-    return search(arm9bin, '\x7c\xb5\x2c\x4c\x05\x00\x2a\x48\x26\x00', 0xb0)
+    type0 = search(arm9bin, '\x7c\xb5\x2c\x4c\x05\x00\x2a\x48\x26\x00', 0xb0)
+    type1 = search(arm9bin, '\x7c\xb5\x2d\x4c\x05\x00\x2b\x48\x26\x00', 0xb4)
+    return type0 or type1
 
 def find_rtfs_cfg_address(arm9bin):
     # 10 B5               PUSH    {R4,LR}
