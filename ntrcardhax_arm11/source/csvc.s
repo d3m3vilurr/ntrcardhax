@@ -15,3 +15,7 @@ SVC_BEGIN svcMapMemory
 	svc 0x6d
 	pop {r4}
 	bx  lr
+
+SVC_BEGIN svcGlobalBackdoor
+	svc 0x30
+	bx  lr

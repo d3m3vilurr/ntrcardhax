@@ -21,7 +21,8 @@
 #include <inttypes.h>
 
 #include <3ds.h>
-#include "svchax.h"
+
+u32 svcGlobalBackdoor(void *backdoor_fn, ...);
 
 vu32 gpu_regs[10];
 vu16* NTRCARD_MCNT = 0x1EC64000;
@@ -372,25 +373,16 @@ void LoadArm9Payload()
 	fclose(file);
 }
 
-int checkAmHandle() {
-	Handle amHandle = 0;
+static u32 kernel_backdoor_ret;
 
-	srvGetServiceHandleDirect(&amHandle, "am:u");
-	if (amHandle) {
-		svcCloseHandle(amHandle);
-		return 0;
-	}
-	return -1;
+void checkArm11HaxBackdoor() {
+	kernel_backdoor_ret = 1;
 }
-int initArm11Hax() {
-	if (!checkAmHandle()) {
-		return 0;
-	}
 
-	printf("Init svchax..\n");
-	svchax_init(true);
-	printf("Initted svchax\n");
-	return checkAmHandle();
+int checkArm11Hax() {
+	kernel_backdoor_ret = 0;
+	svcGlobalBackdoor((s32(*)(void)) & checkArm11HaxBackdoor);
+	return kernel_backdoor_ret;
 }
 
 int main(int argc, char** argv)
@@ -400,21 +392,19 @@ int main(int argc, char** argv)
 	//Initialize console on top screen. Using NULL as the second argument tells the console library to use the internal console structure as current one
 	consoleInit(GFX_TOP, NULL);
 
-	LoadArm9Payload();
-
-	printf("Loaded arm9 payload.\n");
-
-	if (initArm11Hax() < 0) {
+	if (!checkArm11Hax()) {
 		printf("Failed to acquire arm11 kernel access.\n");
 		goto exit;
 	}
-
 	printf("Got arm11 kernel access.\n");
 
+	LoadArm9Payload();
+	printf("Loaded arm9 payload.\n");
+
 	u32* resp = svcBackdoor(find_version_specific_addresses);
-	printf("wrapperAdr   : %08x\n",wrapperAdr);
-	printf("mapMemoryAdr : %08x\n",mapMemoryAdr);
-	printf("PXI_BASE     : %08x\n",PXI_BASE);
+	printf("wrapperAdr   : %08lx\n", wrapperAdr);
+	printf("mapMemoryAdr : %08lx\n",mapMemoryAdr);
+	printf("PXI_BASE     : %08lx\n",PXI_BASE);
 
 	if (wrapperAdr == -1 || mapMemoryAdr == -1 || PXI_BASE == -1) {
 		printf("Failed to find version specific addresses\n");
@@ -424,14 +414,14 @@ int main(int argc, char** argv)
 	printf("backdoor returned %08lx\n", (svcBackdoor(dump_chunk_wrapper), g_backdoorResult));
 
 	Result r = svcMapMemory(g_backdoorResult, 0x1EC00000, 0x300, 1);
-	printf("%08X\n", r);
+	printf("%08lX\n", r);
 
 	u32 old_romcnt = -1;
 	int ctr = 0;
 	int shall_trigger_fs = 0;
 
 	static int do_overflow = 1; //Do this automatically
-	bool card_status = 0;
+	//bool card_status = 0;
 
 	//consoleClear();
 
@@ -511,14 +501,14 @@ int main(int argc, char** argv)
 				*NTRCARD_ROMCNT = ((6 << 24) & 0x7FFFFFF) | 0x883F1FFF;
 				u32 temp = *NTRCARD_ROMCNT;
 
-				printf("Overflow! %08X EXPECTED %08X\n", temp, ((6 << 24) & 0x7FFFFFF) | 0x883F1FFF);
+				printf("Overflow! %08lX EXPECTED %08X\n", temp, ((6 << 24) & 0x7FFFFFF) | 0x883F1FFF);
 				has_changed = 1;
 				shall_trigger_fs = 5;
 			}
 
 			old_romcnt = romcnt;
 
-			printf("%08X\n", *(vu32 *)0x1EC64004);
+			printf("%08lX\n", *(vu32 *)0x1EC64004);
 			//printf("%08X %08X\n", *(vu32 *)0x1EC64008, *(vu32 *)0x1EC6400C);
 		}
 
@@ -543,6 +533,15 @@ int main(int argc, char** argv)
 
 	//closing all services even more so
 exit:
+	printf("Press <start> to continue.\n");
+
+	while (true) {
+		hidScanInput();
+		if (keysHeld() & KEY_START) {
+			break;
+		}
+	}
+
 	gfxExit();
 	return 0;
 }
